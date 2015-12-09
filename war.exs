@@ -16,79 +16,115 @@ defmodule Dealer do
 
     one = spawn(Player, :loop, [ elem(cards, 0) ])
     two = spawn(Player, :loop, [ elem(cards, 1) ])
-    # Process.register one, :one
-    # Process.register two, :two
 
-
-    loop([], one, two, [], [])
+    loop(%{}, one, two, [], [])
   end
 
-  defp loop(stack, player_one, player_two, player1_cards, player2_cards) do
-    case stack do
-      [] ->
-        IO.puts "Empty stack, we're in a battle"
-        send player_one, { self, :card }
-        send player_two, { self, :card }
-      _ ->
-        IO.puts "The stack in the middle is #{Enum.join(stack, ",")}"
-        send player_one, { self, :cards }
-        send player_two, { self, :cards }
-    end
-    [ rank_one, rank_two ] = [ 0, 0 ]
-    current_cards = []
+  defp loop(%{}, player_one, player_two, player1_cards, player2_cards) do
+    IO.puts "Empty stack, we're in a battle"
+    send player_one, { self, :card }
+    send player_two, { self, :card }
+    cards = receive_cards(player_one, player_two)
 
+    IO.puts "cards #{inspect cards}"
+
+    case compare(cards) do
+      { :winner, :one } ->
+        IO.puts "#{inspect player_one} won the battle!"
+      { :winner, :two } ->
+        IO.puts "#{inspect player_two} won the battle!"
+      { :war } ->
+        IO.puts "We have a war!"
+    end
+  end
+
+  defp loop(pile, player_one, player_two, player1_cards, player2_cards) do
+    IO.puts "The pile is #{Enum.join(pile, ",")}"
+    send player_one, { self, :cards }
+    send player_two, { self, :cards }
+  end
+
+  defp receive_cards(player_one, player_two, play_count \\ 0, pile_one \\ Map.new, pile_two \\ Map.new)
+
+  # second card received
+  defp receive_cards(player_one, player_two, 1, pile_one, pile_two) do
     receive do
-      { ^player_one, :card, [] } ->
-        IO.puts "Player one has lost"
-      { ^player_one, :card, val } ->
-        IO.puts "Player one played #{val}"
-        [ _ | rank_one ] = val
-        current_cards = [ val | current_cards ]
-      { ^player_one, :cards, vals } ->
-        IO.puts "player one played #{vals}"
+      { pid, :card, card } ->
+        IO.puts "Player #{inspect pid} played #{card}"
+        cond do
+          pid == player_one -> { card, pile_two }
+          pid == player_two -> { pile_one, card }
+        end
+      { pid, :cards, cards } ->
+        IO.puts "Player #{inspect pid} played #{cards}"
     end
+  end
+
+  # first card received
+  defp receive_cards(player_one, player_two, play_count, pile_one, pile_two) do
     receive do
-      { ^player_two, :card, [] } ->
-        IO.puts "Player two has lost"
-      { ^player_two, :card, val } ->
-        IO.puts "Player two played #{val}"
-        [ _ | rank_two ] = val
-        current_cards = [ val | current_cards ]
-      { ^player_two, :cards, vals } -> IO.puts "player two played #{vals}"
+      { pid, :card, card } ->
+        IO.puts "Player #{inspect pid} played #{card}"
+        case pid do
+          player_one ->
+            receive_cards(player_one, player_two, play_count + 1, card, pile_two)
+          player_two ->
+            receive_cards(player_one, player_two, play_count + 1, pile_one, card)
+        end
+      { pid, :cards, cards } ->
+        IO.puts "Player #{inspect pid} played #{cards}"
     end
 
-    cond do
-      rank_one > rank_two ->
-        send player_one, { self, :victory, current_cards }
-        #loop([], player_one, player_two)
-      rank_one < rank_two ->
-        send player_two, { self, :victory, current_cards }
-        #loop([], player_one, player_two)
-      rank_one == rank_two ->
-        IO.puts "start battle"
-        #loop(current_cards, player_one, player_two)
-    end
   end
 
-  defp compare(a, b) when a > b do
-    IO.puts "give stack to player 1"
+  defp nothing do
+    # [ rank_one, rank_two ] = [ 0, 0 ]
+    # current_cards = []
+
+    # receive do
+    #   { ^player_one, :card, [] } ->
+    #     IO.puts "Player one has lost"
+    #   { ^player_one, :card, val } ->
+    #     IO.puts "Player one played #{val}"
+    #     [ _ | rank_one ] = val
+    #     current_cards = [ val | current_cards ]
+    #   { ^player_one, :cards, vals } ->
+    #     IO.puts "player one played #{vals}"
+    # end
+    # receive do
+    #   { ^player_two, :card, [] } ->
+    #     IO.puts "Player two has lost"
+    #   { ^player_two, :card, val } ->
+    #     IO.puts "Player two played #{val}"
+    #     [ _ | rank_two ] = val
+    #     current_cards = [ val | current_cards ]
+    #   { ^player_two, :cards, vals } -> IO.puts "player two played #{vals}"
+    # end
+
+    # cond do
+    #   rank_one > rank_two ->
+    #     send player_one, { self, :victory, current_cards }
+    #     #loop([], player_one, player_two)
+    #   rank_one < rank_two ->
+    #     send player_two, { self, :victory, current_cards }
+    #     #loop([], player_one, player_two)
+    #   rank_one == rank_two ->
+    #     IO.puts "start battle"
+    #     #loop(current_cards, player_one, player_two)
+    # end
   end
 
-  defp compare(a, b) when a < b do
-    IO.puts "give stack to player 2"
+  defp compare({ a, b }) do
+    {[ _ | a ], [ _ | b ]} = { a, b }
+
+    compare(a, b)
   end
 
-  defp compare(a, a) do
-    # a battle should start
-  end
-
-  defp compare([], _) do
-    # player 1 has lost
-  end
-
-  defp compare(_, []) do
-    # player 2 has lost
-  end
+  defp compare(a, b) when a > b, do: { :winner, :one }
+  defp compare(a, b) when a < b, do: { :winner, :two }
+  defp compare(a, b), do: { :battle }
+  defp compare([], _), do: { :king, :two }
+  defp compare(_, []), do: { :king, :one }
 end
 
 defmodule Player do
