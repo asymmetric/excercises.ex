@@ -19,14 +19,21 @@ defmodule Dealer do
     # Process.register one, :one
     # Process.register two, :two
 
-    send one, { self, :card }
-    send two, { self, :card }
 
-    loop([], one, two)
+    loop([], one, two, [], [])
   end
 
-  defp loop(stack, player_one, player_two) do
-    IO.puts "The stack in the middle is #{Enum.join(stack, ",")}"
+  defp loop(stack, player_one, player_two, player1_cards, player2_cards) do
+    case stack do
+      [] ->
+        IO.puts "Empty stack, we're in a battle"
+        send player_one, { self, :card }
+        send player_two, { self, :card }
+      _ ->
+        IO.puts "The stack in the middle is #{Enum.join(stack, ",")}"
+        send player_one, { self, :cards }
+        send player_two, { self, :cards }
+    end
     [ rank_one, rank_two ] = [ 0, 0 ]
     current_cards = []
 
@@ -53,13 +60,13 @@ defmodule Dealer do
     cond do
       rank_one > rank_two ->
         send player_one, { self, :victory, current_cards }
-        loop([], player_one, player_two)
+        #loop([], player_one, player_two)
       rank_one < rank_two ->
         send player_two, { self, :victory, current_cards }
-        loop([], player_one, player_two)
+        #loop([], player_one, player_two)
       rank_one == rank_two ->
         IO.puts "start battle"
-        loop(current_cards, player_one, player_two)
+        #loop(current_cards, player_one, player_two)
     end
   end
 
