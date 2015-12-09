@@ -3,7 +3,7 @@ defmodule Dealer do
   @ranks '23456789'
   @count 12
 
-  def main do
+  def start do
     import Enum
 
     cards = for suit <- @suits, rank <- @ranks, do: [ suit, rank ]
