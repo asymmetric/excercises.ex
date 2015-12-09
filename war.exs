@@ -77,43 +77,6 @@ defmodule Dealer do
 
   end
 
-  defp nothing do
-    # [ rank_one, rank_two ] = [ 0, 0 ]
-    # current_cards = []
-
-    # receive do
-    #   { ^player_one, :card, [] } ->
-    #     IO.puts "Player one has lost"
-    #   { ^player_one, :card, val } ->
-    #     IO.puts "Player one played #{val}"
-    #     [ _ | rank_one ] = val
-    #     current_cards = [ val | current_cards ]
-    #   { ^player_one, :cards, vals } ->
-    #     IO.puts "player one played #{vals}"
-    # end
-    # receive do
-    #   { ^player_two, :card, [] } ->
-    #     IO.puts "Player two has lost"
-    #   { ^player_two, :card, val } ->
-    #     IO.puts "Player two played #{val}"
-    #     [ _ | rank_two ] = val
-    #     current_cards = [ val | current_cards ]
-    #   { ^player_two, :cards, vals } -> IO.puts "player two played #{vals}"
-    # end
-
-    # cond do
-    #   rank_one > rank_two ->
-    #     send player_one, { self, :victory, current_cards }
-    #     #loop([], player_one, player_two)
-    #   rank_one < rank_two ->
-    #     send player_two, { self, :victory, current_cards }
-    #     #loop([], player_one, player_two)
-    #   rank_one == rank_two ->
-    #     IO.puts "start battle"
-    #     #loop(current_cards, player_one, player_two)
-    # end
-  end
-
   defp compare({ a, b }) do
     {[ _ | a ], [ _ | b ]} = { a, b }
 
